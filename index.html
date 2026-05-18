@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NewJeans Remixes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&family=Geist:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:    #0c0c0c;
+  --bg2:   #141414;
+  --bg3:   #1c1c1c;
+  --bg4:   #222;
+  --line:  #1e1e1e;
+  --line2: #282828;
+  --text:  #dedede;
+  --dim:   #606060;
+  --dimmer:#333;
+  --r:     10px;
+  --r-sm:  6px;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Geist', sans-serif; font-size: 14px; overflow: hidden; }
+.shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 210px; min-width: 210px; flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: width .25s ease, min-width .25s ease;
+  position: relative;
+}
+.sidebar.closed { width: 0; min-width: 0; border-right: none; }
+
+.sb-head { padding: 16px 16px 12px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.sb-head-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.sb-logo { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.sb-close {
+  background: none; border: none; cursor: pointer; color: var(--dim);
+  display: none; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: var(--r-sm);
+  flex-shrink: 0; transition: color .15s; padding: 0;
+}
+.sb-close:hover { color: var(--text); }
+.sb-sub { font-size: 11px; color: var(--dim); margin-top: 2px; font-family: 'Geist Mono', monospace; white-space: nowrap; }
+
+.view-toggle { display: flex; gap: 4px; margin-top: 12px; }
+.vt-btn {
+  flex: 1; padding: 5px 0; border-radius: var(--r-sm);
+  border: 1px solid var(--line2); background: none;
+  font-family: inherit; font-size: 11px; color: var(--dim);
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.vt-btn:hover { color: var(--text); border-color: #3a3a3a; }
+.vt-btn.on { color: var(--text); background: var(--bg3); border-color: #3a3a3a; }
+
+.sb-scroll { flex: 1; overflow-y: auto; padding: 6px 0; }
+.sb-scroll::-webkit-scrollbar { width: 2px; }
+.sb-scroll::-webkit-scrollbar-thumb { background: var(--line2); }
+
+.sb-section { font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--dimmer); padding: 12px 16px 4px; white-space: nowrap; }
+
+.sb-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 16px; width: 100%; text-align: left;
+  border: none; background: none; font-family: inherit; font-size: 12.5px;
+  color: var(--dim); cursor: pointer; white-space: nowrap; transition: color .15s;
+}
+.sb-row:hover { color: var(--text); }
+.sb-row.on { color: var(--text); }
+.sb-row .rn { overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.sb-row .rc { font-family: 'Geist Mono', monospace; font-size: 10px; color: var(--dimmer); flex-shrink: 0; margin-left: 6px; }
+.sb-row.on .rc { color: var(--dim); }
+
+/* ── Mobile overlay ── */
+.sb-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.5); z-index: 19;
+}
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* ── Topbar ── */
+.topbar { height: 50px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+
+.icon-btn {
+  background: none; border: none; cursor: pointer; color: var(--dim);
+  border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; flex-shrink: 0; transition: color .15s;
+}
+.icon-btn:hover { color: var(--text); }
+
+.page-title { font-size: 13px; color: var(--dim); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.page-title strong { color: var(--text); font-weight: 500; }
+
+.surprise-btn {
+  background: none; border: 1px solid var(--line2); color: var(--dim);
+  border-radius: var(--r-sm); padding: 0 11px; height: 30px;
+  font-family: inherit; font-size: 12px; cursor: pointer; flex-shrink: 0;
+  transition: all .15s; white-space: nowrap;
+}
+.surprise-btn:hover { color: var(--text); border-color: #3a3a3a; }
+
+.search-box {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg2); border: 1px solid var(--line2);
+  border-radius: 50px; padding: 0 11px; height: 30px;
+  transition: border-color .15s; max-width: 220px; width: 100%;
+}
+.search-box:focus-within { border-color: #3a3a3a; }
+.search-box svg { flex-shrink: 0; color: var(--dim); }
+.search-box input { border: none; background: none; color: var(--text); font-family: inherit; font-size: 12px; outline: none; width: 100%; }
+.search-box input::placeholder { color: var(--dimmer); }
+
+/* ── Sort bar ── */
+.sortbar {
+  display: flex; align-items: center; gap: 3px;
+  padding: 0 14px; height: 36px; border-bottom: 1px solid var(--line);
+  flex-shrink: 0; overflow-x: auto;
+}
+.sortbar::-webkit-scrollbar { display: none; }
+.s-btn {
+  background: none; border: 1px solid transparent; border-radius: 50px;
+  padding: 2px 10px; font-family: inherit; font-size: 12px; color: var(--dim);
+  cursor: pointer; white-space: nowrap; transition: all .15s;
+}
+.s-btn:hover { color: var(--text); border-color: var(--line2); }
+.s-btn.on { color: var(--text); border-color: var(--line2); background: var(--bg2); }
+.s-div { width: 1px; height: 12px; background: var(--line2); flex-shrink: 0; margin: 0 2px; }
+.res-ct { margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--dimmer); white-space: nowrap; }
+
+/* ── Content ── */
+.content { flex: 1; overflow-y: auto; padding: 14px; }
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 2px; }
+
+/* Song view */
+.song-header { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.song-header h2 { font-size: 15px; font-weight: 500; margin-bottom: 3px; }
+.song-header p  { font-size: 12px; color: var(--dim); }
+.genre-group { margin-bottom: 24px; }
+.genre-group-title {
+  font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--dim); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.genre-group-title::after { content:''; flex:1; height:1px; background: var(--line); }
+
+/* Grid */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+
+/* Card */
+.card {
+  display: block; text-decoration: none; color: inherit;
+  border-radius: var(--r); overflow: hidden; background: var(--bg2);
+  transition: background .15s; animation: up .22s ease both;
+}
+.card:hover { background: var(--bg3); }
+@keyframes up { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
+.card-thumb { position: relative; aspect-ratio: 16/9; background: var(--bg3); overflow: hidden; }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity .2s; }
+.card:hover .card-thumb img { opacity: .8; }
+.card-dur {
+  position: absolute; bottom: 5px; right: 5px;
+  background: rgba(0,0,0,.82); color: #bbb;
+  font-family: 'Geist Mono', monospace; font-size: 10px;
+  padding: 1px 5px; border-radius: 4px; pointer-events: none;
+}
+.card-gtag {
+  position: absolute; top: 5px; left: 5px;
+  background: rgba(0,0,0,.78); color: var(--dim);
+  font-size: 10px; padding: 2px 6px; border-radius: 4px;
+  text-transform: uppercase; font-family: 'Geist Mono', monospace;
+  letter-spacing: .03em; pointer-events: none;
+}
+.card-stag {
+  position: absolute; top: 5px; right: 5px;
+  background: rgba(0,0,0,.78); color: var(--dim);
+  font-size: 10px; padding: 2px 6px; border-radius: 4px;
+  font-family: 'Geist Mono', monospace; pointer-events: none;
+  max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.card-body { padding: 8px 10px 10px; }
+.card-title {
+  font-size: 12.5px; line-height: 1.45; color: var(--text); margin-bottom: 5px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-meta { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--dim); }
+.card-ch   { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+.card-dot  { color: var(--dimmer); }
+.card-vw   { margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 10px; color: var(--dimmer); white-space: nowrap; }
+
+/* Skeleton */
+.skel { border-radius: var(--r); overflow: hidden; background: var(--bg2); animation: pulse 1.4s ease infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+.skel-thumb { aspect-ratio: 16/9; background: var(--bg3); }
+.skel-body  { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+.skel-ln    { height: 10px; border-radius: 3px; background: var(--bg3); }
+
+/* Empty */
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 50vh; gap: 6px; }
+.empty-t { font-size: 14px; color: var(--text); }
+.empty-s { font-size: 12px; color: var(--dim); max-width: 280px; text-align: center; line-height: 1.6; }
+
+/* Surprise overlay */
+.surprise-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50; animation: fadeIn .2s ease;
+}
+@keyframes fadeIn { from{opacity:0}to{opacity:1} }
+.surprise-card {
+  background: var(--bg2); border: 1px solid var(--line2);
+  border-radius: var(--r); width: 380px; max-width: 92vw;
+  overflow: hidden; animation: popUp .2s cubic-bezier(.4,0,.2,1);
+}
+@keyframes popUp { from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1} }
+.surprise-thumb { position: relative; aspect-ratio: 16/9; background: var(--bg3); }
+.surprise-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+.surprise-body { padding: 14px 16px 16px; }
+.surprise-label { font-size: 10px; color: var(--dim); font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.surprise-title { font-size: 14px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
+.surprise-meta  { font-size: 12px; color: var(--dim); margin-bottom: 14px; }
+.surprise-actions { display: flex; gap: 8px; }
+.s-action {
+  flex: 1; padding: 8px 0; border-radius: var(--r-sm);
+  border: 1px solid var(--line2); background: none;
+  font-family: inherit; font-size: 12.5px; color: var(--dim);
+  cursor: pointer; transition: all .15s; text-align: center;
+  text-decoration: none; display: flex; align-items: center; justify-content: center;
+}
+.s-action:hover { color: var(--text); border-color: #3a3a3a; }
+.s-action.primary { background: var(--bg3); color: var(--text); }
+.s-action.primary:hover { background: var(--bg4); }
+
+/* Status bar */
+.statusbar { padding: 5px 14px; border-top: 1px solid var(--line); font-size: 11px; color: var(--dimmer); font-family: 'Geist Mono', monospace; flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+.s-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--dimmer); flex-shrink: 0; }
+.s-dot.green  { background: #4ade80; }
+.s-dot.yellow { background: #facc15; }
+.s-dot.red    { background: #f87171; }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .sidebar {
+    position: fixed; left: 0; top: 0; height: 100%;
+    z-index: 20; background: var(--bg);
+    transform: translateX(0);
+    transition: transform .25s ease, width .25s ease, min-width .25s ease;
+  }
+  .sidebar.closed {
+    transform: translateX(-100%);
+    width: 210px; min-width: 210px;
+    border-right: 1px solid var(--line);
+  }
+  .sb-close { display: flex !important; }
+  .sb-overlay.visible { display: block; }
+  .grid { grid-template-columns: 1fr 1fr; }
+  .surprise-btn { font-size: 0; width: 30px; padding: 0; }
+  .surprise-btn::after { content: '?'; font-size: 14px; }
+  .page-title { font-size: 12px; }
+}
+@media (max-width: 400px) {
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebarMobile()"></div>
+<div class="shell">
+
+  <nav class="sidebar closed" id="sidebar">
+    <div class="sb-head">
+      <div class="sb-head-top">
+        <div class="sb-logo">NewJeans Remixes</div>
+        <button class="sb-close" id="sbClose" onclick="closeSidebarMobile()" title="Close sidebar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="sb-sub">fan remix library</div>
+      <div class="view-toggle">
+        <button class="vt-btn on" id="vtGenre" onclick="setView('genre')">By Genre</button>
+        <button class="vt-btn"    id="vtSong"  onclick="setView('song')">By Song</button>
+      </div>
+    </div>
+    <div class="sb-scroll" id="sbScroll"></div>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" onclick="toggleSidebar()" title="Toggle sidebar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="page-title" id="pageTitle"><strong>All Remixes</strong></div>
+      <button class="surprise-btn" onclick="openSurprise()">Surprise me</button>
+      <div class="search-box">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="searchInput" placeholder="Search..." oninput="onSearch()" />
+      </div>
+    </header>
+
+    <div class="sortbar">
+      <button class="s-btn on" onclick="setSort('relevance',this)">Relevance</button>
+      <button class="s-btn"    onclick="setSort('date_desc',this)">Latest</button>
+      <button class="s-btn"    onclick="setSort('date_asc',this)">Oldest</button>
+      <button class="s-btn"    onclick="setSort('views',this)">Popular</button>
+      <div class="s-div"></div>
+      <button class="s-btn"    onclick="setSort('views_asc',this)">Least viewed</button>
+      <span class="res-ct" id="resCt"></span>
+    </div>
+
+    <div class="content" id="content"></div>
+    <div class="statusbar"><div class="s-dot" id="sDot"></div><span id="sTxt">Loading...</span></div>
+  </div>
+</div>
+
+<!-- Surprise overlay -->
+<div class="surprise-overlay" id="surpriseOverlay" style="display:none" onclick="if(event.target===this)closeSurprise()">
+  <div class="surprise-card">
+    <div class="surprise-thumb"><img id="sThumb" src="" alt="" /></div>
+    <div class="surprise-body">
+      <div class="surprise-label" id="sLabel"></div>
+      <div class="surprise-title" id="sTitle"></div>
+      <div class="surprise-meta"  id="sMeta"></div>
+      <div class="surprise-actions">
+        <button class="s-action" onclick="openSurprise()">Another one</button>
+        <button class="s-action" onclick="closeSurprise()">Close</button>
+        <a class="s-action primary" id="sWatch" href="#" target="_blank" rel="noopener noreferrer">Watch</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──
+// This site loads from data.json (generated by fetch.html).
+// No live API calls are made. Zero quota usage for visitors.
+
+const SONGS = [
+  { id:'attention',      label:'Attention' },
+  { id:'hype-boy',       label:'Hype Boy' },
+  { id:'cookie',         label:'Cookie' },
+  { id:'hurt',           label:'Hurt' },
+  { id:'ditto',          label:'Ditto' },
+  { id:'omg',            label:'OMG' },
+  { id:'super-shy',      label:'Super Shy' },
+  { id:'new-jeans',      label:'New Jeans' },
+  { id:'eta',            label:'ETA' },
+  { id:'cool-with-you',  label:'Cool With You' },
+  { id:'get-up',         label:'Get Up' },
+  { id:'asap',           label:'ASAP' },
+  { id:'how-sweet',      label:'How Sweet' },
+  { id:'bubble-gum',     label:'Bubble Gum' },
+  { id:'right-now',      label:'Right Now' },
+  { id:'supernatural',   label:'Supernatural' },
+  { id:'crazy',          label:'Crazy' },
+  { id:'gods',           label:'gods' },
+  { id:'zero',           label:'Zero' },
+  { id:'sign',           label:'Sign' },
+  { id:'love-me-not',    label:'Love Me Not' },
+  { id:'still-life',     label:'Still Life' },
+  { id:'heady',          label:'Heady' },
+  { id:'blue-string',    label:'Blue String' },
+  { id:'365',            label:'365' },
+  { id:'readme',         label:'README' },
+  { id:'mercury',        label:'Mercury' },
+];
+
+const GENRES = [
+  { id:'city-pop',      label:'City Pop',       kw:['city pop','citypop'] },
+  { id:'bedroom-pop',   label:'Bedroom Pop',    kw:['bedroom pop','bedroomwave','bedroom wave'] },
+  { id:'hyperpop',      label:'Hyperpop',       kw:['hyperpop','digicore','glitchcore'] },
+  { id:'bubblegum-pop', label:'Bubblegum Pop',  kw:['bubblegum pop'] },
+  { id:'indie-pop',     label:'Indie Pop',      kw:['indie pop','indie-pop','indietronica'] },
+  { id:'lo-fi',         label:'Lo-Fi',          kw:['lofi','lo-fi','lo fi','chillhop','study beat','study mix'] },
+  { id:'chillout',      label:'Chillout',       kw:['chillout','chill out','downtempo'] },
+  { id:'phonk',         label:'Phonk',          kw:['phonk'] },
+  { id:'future-bass',   label:'Future Bass',    kw:['future bass'] },
+  { id:'deep-house',    label:'Deep House',     kw:['deep house'] },
+  { id:'tech-house',    label:'Tech House',     kw:['tech house','tech-house'] },
+  { id:'future-house',  label:'Future House',   kw:['future house'] },
+  { id:'house',         label:'House',          kw:['house music','house remix','house edit','house mix',' house '] },
+  { id:'techno',        label:'Techno',         kw:['techno'] },
+  { id:'trance',        label:'Trance',         kw:['trance','psytrance','psy trance'] },
+  { id:'dnb',           label:'Drum & Bass',    kw:['drum and bass','drum & bass','dnb','d&b','jungle'] },
+  { id:'dubstep',       label:'Dubstep',        kw:['dubstep','riddim','brostep'] },
+  { id:'garage',        label:'UK Garage',      kw:['uk garage','2step','2-step'] },
+  { id:'jersey',        label:'Jersey Club',    kw:['jersey club','jersey flip','jersey edit'] },
+  { id:'edm',           label:'EDM',            kw:['edm','electro house','big room','festival edit'] },
+  { id:'electronic',    label:'Electronic',     kw:['electronic remix','electronic edit','electronica'] },
+  { id:'synthwave',     label:'Synthwave',      kw:['synthwave','retrowave','outrun','darksynth'] },
+  { id:'vaporwave',     label:'Vaporwave',      kw:['vaporwave','vaportrap','future funk'] },
+  { id:'ambient',       label:'Ambient',        kw:['ambient','atmospheric','soundscape'] },
+  { id:'neo-soul',      label:'Neo Soul',       kw:['neo soul','neo-soul','neosoul'] },
+  { id:'r&b',           label:'R&B',            kw:['r&b','rnb','rhythm and blues'] },
+  { id:'soul',          label:'Soul',           kw:['soul remix','soul edit','soul flip'] },
+  { id:'jazz',          label:'Jazz',           kw:['jazz','bossa nova','bossanova','swing','bebop'] },
+  { id:'funk',          label:'Funk',           kw:['funk remix','funk edit','funky remix'] },
+  { id:'disco',         label:'Disco',          kw:['disco remix','disco edit','disco flip'] },
+  { id:'afrobeats',     label:'Afrobeats',      kw:['afrobeats','afro pop','afrobeat'] },
+  { id:'latin',         label:'Latin',          kw:['latin remix','reggaeton','cumbia','dembow'] },
+  { id:'reggae',        label:'Reggae',         kw:['reggae','dancehall'] },
+  { id:'trap',          label:'Trap',           kw:['trap remix','trap edit','trap flip','trap mix',' trap '] },
+  { id:'drill',         label:'Drill',          kw:['drill remix','drill edit','uk drill'] },
+  { id:'hip-hop',       label:'Hip-Hop',        kw:['hip hop remix','hip-hop remix','hiphop remix','hip hop edit','rap remix','rap edit','rap flip'] },
+  { id:'club',          label:'Club',           kw:['club remix','club mix','club banger','club edit'] },
+  { id:'acoustic',      label:'Acoustic',       kw:['acoustic','guitar remix','guitar cover','piano remix','piano ver','piano edit','piano cover'] },
+  { id:'orchestral',    label:'Orchestral',     kw:['orchestral','orchestra','cinematic remix','strings remix'] },
+  { id:'pop',           label:'Pop',            kw:['pop remix','pop edit','pop mix','pop flip'] },
+  { id:'misc',          label:'Misc',           kw:[] },
+];
+
+// ── STATE ──
+let all   = [];
+let view  = 'genre';
+let sel   = 'all';
+let sort  = 'relevance';
+let q     = '';
+let isMobile = () => window.innerWidth <= 600;
+let sbOpen = false;
+
+// ── SIDEBAR ──
+function toggleSidebar() {
+  sbOpen = !sbOpen;
+  document.getElementById('sidebar').classList.toggle('closed', !sbOpen);
+  if (isMobile()) {
+    document.getElementById('sbOverlay').classList.toggle('visible', sbOpen);
+  }
+}
+function closeSidebarMobile() {
+  sbOpen = false;
+  document.getElementById('sidebar').classList.add('closed');
+  document.getElementById('sbOverlay').classList.remove('visible');
+}
+
+function setView(v) {
+  view = v; sel = 'all';
+  document.getElementById('vtGenre').classList.toggle('on', v === 'genre');
+  document.getElementById('vtSong').classList.toggle('on',  v === 'song');
+  buildSidebar(); updateTitle(); render();
+}
+
+function buildSidebar() {
+  const el = document.getElementById('sbScroll');
+  el.innerHTML = '';
+  if (view === 'genre') {
+    const counts = {};
+    all.forEach(v => { counts[v.genre] = (counts[v.genre]||0)+1; });
+    el.appendChild(mkRow('all','All',all.length));
+    el.appendChild(mkSep('Genres'));
+    GENRES.forEach(g => {
+      if (g.id === 'misc') return;
+      if (counts[g.id] > 0) el.appendChild(mkRow(g.id, g.label, counts[g.id]));
+    });
+    if (counts['misc'] > 0) { el.appendChild(mkSep('Other')); el.appendChild(mkRow('misc','Misc',counts['misc'])); }
+  } else {
+    const counts = {};
+    all.forEach(v => { counts[v.song] = (counts[v.song]||0)+1; });
+    el.appendChild(mkRow('all','All Songs',all.length));
+    el.appendChild(mkSep('Songs'));
+    SONGS.forEach(s => {
+      if (counts[s.id] > 0) el.appendChild(mkRow(s.id, s.label, counts[s.id]));
+    });
+    if (counts['unknown'] > 0) { el.appendChild(mkSep('Other')); el.appendChild(mkRow('unknown','Unknown',counts['unknown'])); }
+  }
+  highlightSb();
+}
+
+function mkRow(id, label, count) {
+  const b = document.createElement('button');
+  b.className = 'sb-row'; b.dataset.id = id;
+  b.onclick = () => {
+    sel = id; highlightSb(); updateTitle(); render();
+    if (isMobile()) closeSidebarMobile();
+  };
+  b.innerHTML = `<span class="rn">${esc(label)}</span><span class="rc">${count}</span>`;
+  return b;
+}
+function mkSep(label) {
+  const d = document.createElement('div'); d.className = 'sb-section'; d.textContent = label; return d;
+}
+function highlightSb() {
+  document.querySelectorAll('.sb-row').forEach(b => b.classList.toggle('on', b.dataset.id === sel));
+}
+function updateTitle() {
+  const el = document.getElementById('pageTitle');
+  if (sel === 'all') { el.innerHTML = `<strong>All Remixes</strong>`; return; }
+  if (view === 'genre') {
+    const g = GENRES.find(x => x.id === sel);
+    el.innerHTML = `<strong>${esc(g?.label || sel)}</strong>`;
+  } else {
+    const s = SONGS.find(x => x.id === sel);
+    el.innerHTML = `<strong>${esc(s?.label || sel)}</strong> <span style="color:var(--dim);font-weight:400">— all remixes</span>`;
+  }
+}
+
+// ── LABELS ──
+function genreLabel(id) { return GENRES.find(g => g.id === id)?.label || id; }
+function songLabel(id)  { return SONGS.find(s => s.id === id)?.label  || id; }
+
+// ── LOAD DATA ──
+async function loadData() {
+  showSkel();
+  setStatus('yellow','Loading...');
+  try {
+    const r = await fetch('data.json');
+    if (!r.ok) throw new Error('data.json not found (HTTP ' + r.status + ')');
+    const json = await r.json();
+    if (!json.videos || !json.videos.length) throw new Error('data.json is empty');
+    all = json.videos;
+    buildSidebar(); render();
+    setStatus('green', `${all.length} remixes — updated ${fmtDate(json.generated)}`);
+  } catch(e) {
+    console.warn(e.message);
+    setStatus('red', 'Upload data.json to GitHub to load remixes');
+    document.getElementById('content').innerHTML = `
+      <div class="empty">
+        <div class="empty-t">No data found</div>
+        <div class="empty-s">
+          Run fetch.html locally to generate data.json,
+          then upload it to your GitHub repo alongside index.html.
+        </div>
+      </div>`;
+  }
+}
+
+// ── SORT & SEARCH ──
+function setSort(s, btn) {
+  sort = s;
+  document.querySelectorAll('.s-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  render();
+}
+function onSearch() { q = document.getElementById('searchInput').value; render(); }
+
+function getFiltered() {
+  let list = [...all];
+  if (view === 'genre') { if (sel !== 'all') list = list.filter(v => v.genre === sel); }
+  else                  { if (sel !== 'all') list = list.filter(v => v.song  === sel); }
+  if (q) { const lq = q.toLowerCase(); list = list.filter(v => v.title.toLowerCase().includes(lq) || v.channel.toLowerCase().includes(lq)); }
+  if (sort === 'date_desc')  list.sort((a,b) => new Date(b.published)-new Date(a.published));
+  else if (sort === 'date_asc')  list.sort((a,b) => new Date(a.published)-new Date(b.published));
+  else if (sort === 'views')     list.sort((a,b) => b.views-a.views);
+  else if (sort === 'views_asc') list.sort((a,b) => a.views-b.views);
+  return list;
+}
+
+// ── RENDER ──
+function render() {
+  const list = getFiltered();
+  document.getElementById('resCt').textContent = `${list.length} video${list.length!==1?'s':''}`;
+  const el = document.getElementById('content');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-t">No remixes found</div><div class="empty-s">Try a different selection or search term.</div></div>`;
+    return;
+  }
+  if (view === 'song' && sel !== 'all') { renderSongView(list, el); return; }
+  el.innerHTML = '';
+  const grid = document.createElement('div'); grid.className = 'grid';
+  list.forEach((v, i) => grid.appendChild(mkCard(v, i, true)));
+  el.appendChild(grid);
+}
+
+function renderSongView(list, el) {
+  el.innerHTML = '';
+  const hdr = document.createElement('div'); hdr.className = 'song-header';
+  const gs = new Set(list.map(v => v.genre)).size;
+  hdr.innerHTML = `<h2>${esc(songLabel(sel))}</h2><p>${list.length} remix${list.length!==1?'es':''} across ${gs} genre${gs!==1?'s':''}</p>`;
+  el.appendChild(hdr);
+  const groups = {};
+  list.forEach(v => { (groups[v.genre] = groups[v.genre]||[]).push(v); });
+  Object.entries(groups).sort((a,b) => b[1].length-a[1].length).forEach(([gid, vids], gi) => {
+    const sec = document.createElement('div'); sec.className = 'genre-group';
+    sec.innerHTML = `<div class="genre-group-title">${esc(genreLabel(gid))} <span style="color:var(--dimmer);font-size:10px;margin-left:2px">${vids.length}</span></div>`;
+    const grid = document.createElement('div'); grid.className = 'grid';
+    vids.forEach((v, i) => grid.appendChild(mkCard(v, gi*10+i, false)));
+    sec.appendChild(grid); el.appendChild(sec);
+  });
+}
+
+function mkCard(v, i, showSongTag) {
+  const a = document.createElement('a');
+  a.className = 'card';
+  a.href = `https://www.youtube.com/watch?v=${v.id}`;
+  a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.style.animationDelay = `${Math.min(i*20,280)}ms`;
+  a.innerHTML = `
+    <div class="card-thumb">
+      <img src="${esc(v.thumb)}" alt="" loading="lazy" />
+      <div class="card-gtag">${esc(genreLabel(v.genre))}</div>
+      ${showSongTag && v.song !== 'unknown' ? `<div class="card-stag">${esc(songLabel(v.song))}</div>` : ''}
+      ${v.dur ? `<div class="card-dur">${esc(v.dur)}</div>` : ''}
+    </div>
+    <div class="card-body">
+      <div class="card-title">${esc(v.title)}</div>
+      <div class="card-meta">
+        <span class="card-ch">${esc(v.channel)}</span>
+        <span class="card-dot">·</span>
+        <span>${ago(v.published)}</span>
+        ${v.views ? `<span class="card-vw">${fmtV(v.views)}</span>` : ''}
+      </div>
+    </div>`;
+  return a;
+}
+
+function showSkel() {
+  document.getElementById('content').innerHTML =
+    '<div class="grid">' +
+    Array.from({length:20}, () =>
+      `<div class="skel"><div class="skel-thumb"></div><div class="skel-body">
+       <div class="skel-ln" style="width:82%"></div>
+       <div class="skel-ln" style="width:60%"></div>
+       <div class="skel-ln" style="width:40%"></div>
+       </div></div>`).join('') + '</div>';
+}
+
+// ── SURPRISE ──
+function openSurprise() {
+  if (!all.length) return;
+  const v = all[Math.floor(Math.random() * all.length)];
+  document.getElementById('sThumb').src  = v.thumb;
+  document.getElementById('sLabel').textContent = genreLabel(v.genre) + (v.song !== 'unknown' ? ' · ' + songLabel(v.song) : '');
+  document.getElementById('sTitle').textContent = v.title;
+  document.getElementById('sMeta').textContent  = v.channel + (v.views ? ' · ' + fmtV(v.views) + ' views' : '') + (v.dur ? ' · ' + v.dur : '');
+  document.getElementById('sWatch').href = `https://www.youtube.com/watch?v=${v.id}`;
+  document.getElementById('surpriseOverlay').style.display = 'flex';
+}
+function closeSurprise() { document.getElementById('surpriseOverlay').style.display = 'none'; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSurprise(); });
+
+// ── STATUS ──
+function setStatus(color, msg) {
+  document.getElementById('sDot').className = `s-dot ${color}`;
+  document.getElementById('sTxt').textContent = msg;
+}
+
+// ── UTILS ──
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtV(n) { return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n); }
+function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function ago(iso) {
+  if (!iso) return '';
+  const d = (Date.now()-new Date(iso))/1000;
+  if (d<3600) return Math.floor(d/60)+'m ago';
+  if (d<86400) return Math.floor(d/3600)+'h ago';
+  if (d<2592000) return Math.floor(d/86400)+'d ago';
+  if (d<31536000) return Math.floor(d/2592000)+'mo ago';
+  return Math.floor(d/31536000)+'y ago';
+}
+
+// ── INIT ──
+loadData();
+</script>
+</body>
+</html>
