@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NJ Remixes — Fetch Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg:#0c0c0c; --bg2:#141414; --bg3:#1c1c1c; --line:#222; --line2:#2a2a2a; --text:#dedede; --dim:#666; --dimmer:#333; --green:#4ade80; --yellow:#facc15; --red:#f87171; --r:10px; }
+html, body { min-height:100%; background:var(--bg); color:var(--text); font-family:'Geist',sans-serif; font-size:14px; padding:32px 24px; }
+.wrap { max-width:640px; margin:0 auto; }
+h1 { font-size:18px; font-weight:500; margin-bottom:4px; }
+.sub { font-size:12px; color:var(--dim); font-family:'Geist Mono',monospace; margin-bottom:28px; }
+.card { background:var(--bg2); border:1px solid var(--line2); border-radius:var(--r); padding:20px; margin-bottom:14px; }
+.card-title { font-size:13px; font-weight:500; margin-bottom:10px; }
+.card p { font-size:12.5px; color:var(--dim); line-height:1.8; }
+.card code { font-family:'Geist Mono',monospace; font-size:11px; background:var(--bg3); padding:2px 6px; border-radius:4px; color:var(--text); }
+.start-btn { width:100%; padding:12px; border-radius:var(--r); border:none; background:var(--bg3); color:var(--text); font-family:inherit; font-size:14px; font-weight:500; cursor:pointer; transition:background .15s; margin-bottom:14px; }
+.start-btn:hover { background:#2a2a2a; }
+.start-btn:disabled { opacity:.4; cursor:not-allowed; }
+.progress-wrap { margin-bottom:14px; display:none; }
+.progress-wrap.on { display:block; }
+.progress-label { font-size:12px; color:var(--dim); margin-bottom:6px; font-family:'Geist Mono',monospace; }
+.progress-bg { height:3px; background:var(--line2); border-radius:2px; }
+.progress-bar { height:3px; background:var(--green); border-radius:2px; width:0%; transition:width .3s; }
+.log-box { background:var(--bg2); border:1px solid var(--line2); border-radius:var(--r); padding:16px; font-family:'Geist Mono',monospace; font-size:11.5px; height:340px; overflow-y:auto; color:var(--dim); display:none; margin-bottom:14px; }
+.log-box.on { display:block; }
+.log-box::-webkit-scrollbar { width:3px; }
+.log-box::-webkit-scrollbar-thumb { background:var(--line2); }
+.ll { padding:2px 0; line-height:1.6; }
+.ll.g { color:var(--green); } .ll.y { color:var(--yellow); } .ll.r { color:var(--red); } .ll.w { color:var(--text); }
+.result { background:var(--bg2); border:1px solid var(--line2); border-radius:var(--r); padding:20px; display:none; }
+.result.on { display:block; }
+.result-title { font-size:13px; font-weight:500; margin-bottom:14px; }
+.stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+.stat { background:var(--bg3); border-radius:8px; padding:12px; }
+.stat-n { font-size:20px; font-weight:500; font-family:'Geist Mono',monospace; }
+.stat-l { font-size:11px; color:var(--dim); margin-top:2px; }
+.dl-btn { width:100%; padding:12px; border-radius:var(--r); border:1px solid var(--line2); background:var(--bg3); color:var(--text); font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; transition:background .15s; }
+.dl-btn:hover { background:#2a2a2a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NJ Remixes — Fetch Tool</h1>
+  <div class="sub">run locally · generates data.json · zero quota on your live site</div>
+
+  <div class="card">
+    <div class="card-title">How to use</div>
+    <p>
+      1. Open this file locally in your browser (double-click it)<br>
+      2. Click <strong>Start Fetching</strong> — runs all search queries<br>
+      3. Click <strong>Download data.json</strong> when done<br>
+      4. Upload <code>data.json</code> + <code>index.html</code> to your GitHub repo<br>
+      5. Done — your site loads with zero API calls for all visitors<br>
+      6. Repeat once a month to add newly uploaded remixes
+    </p>
+  </div>
+
+  <button class="start-btn" id="startBtn" onclick="startFetch()">Start Fetching</button>
+
+  <div class="progress-wrap" id="pw">
+    <div class="progress-label" id="pl">0 / 0</div>
+    <div class="progress-bg"><div class="progress-bar" id="pb"></div></div>
+  </div>
+
+  <div class="log-box" id="log"></div>
+
+  <div class="result" id="result">
+    <div class="result-title">Fetch complete</div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="sTotal">0</div><div class="stat-l">remixes</div></div>
+      <div class="stat"><div class="stat-n" id="sGenres">0</div><div class="stat-l">genres</div></div>
+      <div class="stat"><div class="stat-n" id="sSongs">0</div><div class="stat-l">songs covered</div></div>
+    </div>
+    <button class="dl-btn" onclick="dlJson()">Download data.json</button>
+  </div>
+</div>
+
+<script>
+// ── API KEY ──
+// Restrict in Google Cloud Console to: yourusername.github.io/*
+const API_KEY = 'AIzaSyC_CnK4A4E_b8rnJxUOnr1IYrWHzp4DWr4';
+
+// ── MAXIMUM COVERAGE QUERIES ──
+// Every song × every remix type + every song × every genre
+const QUERIES = [
+  // ── General ──
+  'newjeans remix','newjeans edit','newjeans flip','newjeans rework',
+  'newjeans mashup','newjeans fan remix','"new jeans" remix',
+  'newjeans remix 2022','newjeans remix 2023','newjeans remix 2024','newjeans remix 2025',
+
+  // ── Per song — general ──
+  'newjeans attention remix','newjeans hype boy remix','newjeans cookie remix',
+  'newjeans ditto remix','newjeans omg remix','newjeans super shy remix',
+  'newjeans eta remix','newjeans cool with you remix','newjeans get up remix',
+  'newjeans asap remix','newjeans how sweet remix','newjeans bubble gum remix',
+  'newjeans right now remix','newjeans supernatural remix','newjeans hurt remix',
+  'newjeans zero remix','newjeans crazy remix','newjeans gods remix',
+  'newjeans sign remix','newjeans love me not remix','newjeans still life remix',
+  'newjeans heady remix','newjeans blue string remix','newjeans 365 remix',
+  'newjeans readme remix','newjeans mercury remix','newjeans new jeans remix',
+  'attention newjeans remix','hype boy newjeans remix','ditto newjeans remix',
+  'super shy newjeans remix','omg newjeans remix','cookie newjeans remix',
+  'eta newjeans remix','how sweet newjeans remix','bubble gum newjeans remix',
+
+  // ── Per song — edits ──
+  'newjeans attention edit','newjeans hype boy edit','newjeans ditto edit',
+  'newjeans cookie edit','newjeans super shy edit','newjeans omg edit',
+  'newjeans eta edit','newjeans how sweet edit','newjeans bubble gum edit',
+  'newjeans supernatural edit','newjeans hurt edit',
+
+  // ── Per song — flips ──
+  'attention newjeans flip','hype boy flip remix','ditto flip remix',
+  'super shy flip remix','omg flip remix','cookie flip remix',
+  'newjeans flip remix',
+
+  // ── Genre × General ──
+  'newjeans lofi remix','newjeans lo-fi remix','newjeans lofi edit','newjeans lofi',
+  'newjeans house remix','newjeans deep house remix','newjeans tech house remix','newjeans future house remix',
+  'newjeans phonk remix','newjeans phonk flip','newjeans phonk edit',
+  'newjeans trap remix','newjeans trap edit','newjeans trap flip',
+  'newjeans rnb remix','newjeans r&b remix','newjeans neo soul remix','newjeans soul remix',
+  'newjeans jazz remix','newjeans bossa nova remix','newjeans jazz edit',
+  'newjeans synthwave remix','newjeans retrowave remix','newjeans vaporwave remix',
+  'newjeans hyperpop remix','newjeans hyperpop edit','newjeans digicore remix',
+  'newjeans drum and bass remix','newjeans dnb remix','newjeans dnb edit',
+  'newjeans city pop remix','newjeans citypop remix',
+  'newjeans future bass remix','newjeans future bass edit',
+  'newjeans ambient remix','newjeans chillout remix','newjeans downtempo remix',
+  'newjeans drill remix','newjeans uk drill remix',
+  'newjeans hip hop remix','newjeans rap remix','newjeans hip hop edit',
+  'newjeans edm remix','newjeans techno remix','newjeans trance remix',
+  'newjeans acoustic remix','newjeans piano remix','newjeans guitar remix','newjeans piano cover',
+  'newjeans indie pop remix','newjeans bedroom pop remix','newjeans indie remix',
+  'newjeans uk garage remix','newjeans jersey club remix','newjeans club remix',
+  'newjeans disco remix','newjeans funk remix','newjeans afrobeats remix',
+  'newjeans dubstep remix','newjeans orchestral remix','newjeans classical remix',
+  'newjeans electronic remix','newjeans electro remix',
+  'newjeans latin remix','newjeans reggae remix',
+
+  // ── Genre × Hype Boy (most remixed song) ──
+  'hype boy lofi remix','hype boy house remix','hype boy phonk remix',
+  'hype boy trap remix','hype boy rnb remix','hype boy jazz remix',
+  'hype boy synthwave remix','hype boy hyperpop remix','hype boy dnb remix',
+  'hype boy city pop remix','hype boy future bass remix','hype boy edm remix',
+  'hype boy acoustic remix','hype boy piano remix',
+
+  // ── Genre × Ditto ──
+  'ditto lofi remix','ditto house remix','ditto phonk remix',
+  'ditto trap remix','ditto rnb remix','ditto jazz remix',
+  'ditto synthwave remix','ditto hyperpop remix','ditto city pop remix',
+  'ditto acoustic remix','ditto piano remix','ditto edm remix',
+
+  // ── Genre × Super Shy ──
+  'super shy lofi remix','super shy house remix','super shy phonk',
+  'super shy trap remix','super shy rnb remix','super shy jazz remix',
+  'super shy synthwave','super shy hyperpop','super shy dnb remix',
+  'super shy acoustic','super shy piano remix',
+
+  // ── Genre × OMG ──
+  'omg newjeans lofi','omg newjeans house remix','omg newjeans phonk',
+  'omg newjeans trap remix','omg newjeans rnb remix','omg newjeans jazz',
+  'omg newjeans synthwave','omg newjeans hyperpop','omg newjeans acoustic',
+
+  // ── Genre × Attention ──
+  'attention newjeans lofi','attention newjeans house','attention newjeans phonk',
+  'attention newjeans trap','attention newjeans rnb','attention newjeans jazz',
+  'attention newjeans synthwave','attention newjeans hyperpop',
+
+  // ── Genre × ETA ──
+  'eta newjeans lofi','eta newjeans house remix','eta newjeans trap',
+  'eta newjeans rnb remix','eta newjeans phonk','eta newjeans dnb',
+
+  // ── Genre × How Sweet ──
+  'how sweet newjeans lofi','how sweet newjeans house','how sweet newjeans phonk',
+  'how sweet newjeans rnb','how sweet newjeans jazz','how sweet newjeans trap',
+
+  // ── Genre × Bubble Gum ──
+  'bubble gum newjeans lofi','bubble gum newjeans house','bubble gum newjeans phonk',
+  'bubble gum newjeans trap','bubble gum newjeans rnb',
+
+  // ── Genre × Supernatural ──
+  'supernatural newjeans remix','supernatural newjeans lofi','supernatural newjeans house',
+  'supernatural newjeans phonk','supernatural newjeans trap',
+
+  // ── Genre × Cookie ──
+  'cookie newjeans lofi','cookie newjeans house remix','cookie newjeans phonk',
+  'cookie newjeans trap remix','cookie newjeans rnb remix',
+
+  // ── Genre × Hurt ──
+  'hurt newjeans remix','hurt newjeans lofi','hurt newjeans rnb remix',
+  'hurt newjeans piano remix','hurt newjeans acoustic',
+];
+
+// Deduplicate
+const QUERY_LIST = [...new Set(QUERIES)];
+
+// ── FILTERS ──
+const OFFICIAL    = ['newjeans','ador','hybe labels','bunnies camp','hybe','weverse music','big hit music'];
+const REMIX_WORDS = ['remix','flip','edit','rework','refix','mashup','mix'];
+const NJ_NAMES    = ['newjeans','new jeans'];
+const NJ_SONGS_KW = [
+  'attention','hype boy','hypeboy','cookie','ditto','omg','super shy','supershy',
+  'eta','cool with you','get up','asap','how sweet','bubble gum','bubblegum',
+  'right now','supernatural','crazy','gods','zero','sign','love me not',
+  'still life','heady','blue string','365','readme','read me','mercury','hurt',
+];
+const BLOCKLIST = [
+  'reaction','react to','reacts','listening to','first time hearing',
+  'tutorial','how to','lesson','type beat','sample pack',
+  'compilation','top 10','top 5','ranking','tier list','not newjeans',
+];
+
+const GENRES = [
+  { id:'city-pop',      label:'City Pop',       kw:['city pop','citypop'] },
+  { id:'bedroom-pop',   label:'Bedroom Pop',    kw:['bedroom pop','bedroomwave','bedroom wave'] },
+  { id:'hyperpop',      label:'Hyperpop',       kw:['hyperpop','digicore','glitchcore'] },
+  { id:'bubblegum-pop', label:'Bubblegum Pop',  kw:['bubblegum pop'] },
+  { id:'indie-pop',     label:'Indie Pop',      kw:['indie pop','indie-pop','indietronica'] },
+  { id:'lo-fi',         label:'Lo-Fi',          kw:['lofi','lo-fi','lo fi','chillhop','study beat','study mix'] },
+  { id:'chillout',      label:'Chillout',       kw:['chillout','chill out','downtempo'] },
+  { id:'phonk',         label:'Phonk',          kw:['phonk'] },
+  { id:'future-bass',   label:'Future Bass',    kw:['future bass'] },
+  { id:'deep-house',    label:'Deep House',     kw:['deep house'] },
+  { id:'tech-house',    label:'Tech House',     kw:['tech house','tech-house'] },
+  { id:'future-house',  label:'Future House',   kw:['future house'] },
+  { id:'house',         label:'House',          kw:['house music','house remix','house edit','house mix',' house '] },
+  { id:'techno',        label:'Techno',         kw:['techno'] },
+  { id:'trance',        label:'Trance',         kw:['trance','psytrance','psy trance'] },
+  { id:'dnb',           label:'Drum & Bass',    kw:['drum and bass','drum & bass','dnb','d&b','jungle'] },
+  { id:'dubstep',       label:'Dubstep',        kw:['dubstep','riddim','brostep'] },
+  { id:'garage',        label:'UK Garage',      kw:['uk garage','2step','2-step'] },
+  { id:'jersey',        label:'Jersey Club',    kw:['jersey club','jersey flip','jersey edit'] },
+  { id:'edm',           label:'EDM',            kw:['edm','electro house','big room','festival edit'] },
+  { id:'electronic',    label:'Electronic',     kw:['electronic remix','electronic edit','electronica'] },
+  { id:'synthwave',     label:'Synthwave',      kw:['synthwave','retrowave','outrun','darksynth'] },
+  { id:'vaporwave',     label:'Vaporwave',      kw:['vaporwave','vaportrap','future funk'] },
+  { id:'ambient',       label:'Ambient',        kw:['ambient','atmospheric','soundscape'] },
+  { id:'neo-soul',      label:'Neo Soul',       kw:['neo soul','neo-soul','neosoul'] },
+  { id:'r&b',           label:'R&B',            kw:['r&b','rnb','rhythm and blues'] },
+  { id:'soul',          label:'Soul',           kw:['soul remix','soul edit','soul flip'] },
+  { id:'jazz',          label:'Jazz',           kw:['jazz','bossa nova','bossanova','swing','bebop'] },
+  { id:'funk',          label:'Funk',           kw:['funk remix','funk edit','funky remix'] },
+  { id:'disco',         label:'Disco',          kw:['disco remix','disco edit','disco flip'] },
+  { id:'afrobeats',     label:'Afrobeats',      kw:['afrobeats','afro pop','afrobeat'] },
+  { id:'latin',         label:'Latin',          kw:['latin remix','reggaeton','cumbia','dembow'] },
+  { id:'reggae',        label:'Reggae',         kw:['reggae','dancehall'] },
+  { id:'trap',          label:'Trap',           kw:['trap remix','trap edit','trap flip','trap mix',' trap '] },
+  { id:'drill',         label:'Drill',          kw:['drill remix','drill edit','uk drill'] },
+  { id:'hip-hop',       label:'Hip-Hop',        kw:['hip hop remix','hip-hop remix','hiphop remix','hip hop edit','rap remix','rap edit','rap flip'] },
+  { id:'club',          label:'Club',           kw:['club remix','club mix','club banger','club edit'] },
+  { id:'acoustic',      label:'Acoustic',       kw:['acoustic','guitar remix','guitar cover','piano remix','piano ver','piano edit','piano cover'] },
+  { id:'orchestral',    label:'Orchestral',     kw:['orchestral','orchestra','cinematic remix','strings remix'] },
+  { id:'pop',           label:'Pop',            kw:['pop remix','pop edit','pop mix','pop flip'] },
+  { id:'misc',          label:'Misc',           kw:[] },
+];
+
+const SONG_KW = {
+  'attention':     ['attention'],
+  'hype-boy':      ['hype boy','hypeboy'],
+  'cookie':        ['cookie'],
+  'hurt':          ['hurt'],
+  'ditto':         ['ditto'],
+  'omg':           ['omg'],
+  'super-shy':     ['super shy','supershy'],
+  'new-jeans':     ['new jeans song'],
+  'eta':           [' eta ','eta remix','eta edit','eta flip'],
+  'cool-with-you': ['cool with you'],
+  'get-up':        ['get up','getup'],
+  'asap':          ['asap','a.s.a.p'],
+  'how-sweet':     ['how sweet'],
+  'bubble-gum':    ['bubble gum','bubblegum'],
+  'right-now':     ['right now'],
+  'supernatural':  ['supernatural'],
+  'crazy':         ['crazy'],
+  'gods':          ['gods'],
+  'zero':          ['zero'],
+  'sign':          ['sign'],
+  'love-me-not':   ['love me not'],
+  'still-life':    ['still life'],
+  'heady':         ['heady'],
+  'blue-string':   ['blue string'],
+  '365':           ['365'],
+  'readme':        ['readme','read me'],
+  'mercury':       ['mercury'],
+};
+
+function detectGenre(title) {
+  const t = ' ' + title.toLowerCase() + ' ';
+  for (const g of GENRES) {
+    if (g.id === 'misc') continue;
+    if (g.kw.some(k => t.includes(k))) return g.id;
+  }
+  return 'misc';
+}
+function detectSong(title) {
+  const t = ' ' + title.toLowerCase() + ' ';
+  for (const [id, kws] of Object.entries(SONG_KW)) {
+    if (kws.some(k => t.includes(k))) return id;
+  }
+  return 'unknown';
+}
+function isRemix(item) {
+  const title = (item.snippet?.title||'').toLowerCase();
+  const ch    = (item.snippet?.channelTitle||'').toLowerCase();
+  if (OFFICIAL.some(o => ch.includes(o))) return false;
+  if (!REMIX_WORDS.some(w => title.includes(w))) return false;
+  const hasNJName = NJ_NAMES.some(n => title.includes(n));
+  const hasNJSong = NJ_SONGS_KW.some(s => title.includes(s));
+  if (!hasNJName && !hasNJSong) return false;
+  if (BLOCKLIST.some(b => title.includes(b))) return false;
+  return true;
+}
+function durSecs(iso) {
+  if (!iso) return 0;
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  return m ? (+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0) : 0;
+}
+function fmtDur(iso) {
+  if (!iso) return '';
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return '';
+  const h=+m[1]||0,mn=+m[2]||0,s=+m[3]||0;
+  return h?`${h}:${p2(mn)}:${p2(s)}`:`${mn}:${p2(s)}`;
+}
+function p2(n) { return String(n).padStart(2,'0'); }
+
+let resultData = null;
+
+function log(msg, cls='') {
+  const box = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = 'll' + (cls ? ' '+cls : '');
+  d.textContent = msg;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function startFetch() {
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('log').classList.add('on');
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('pw').classList.add('on');
+  document.getElementById('result').classList.remove('on');
+
+  const seen = new Set(), raw = [];
+  const total = QUERY_LIST.length;
+  log(`Starting — ${total} queries`, 'y');
+
+  for (let i = 0; i < QUERY_LIST.length; i++) {
+    const q = QUERY_LIST[i];
+    document.getElementById('pl').textContent = `${i+1} / ${total} — ${raw.length} found`;
+    document.getElementById('pb').style.width = `${((i+1)/total)*100}%`;
+
+    try {
+      const p = new URLSearchParams({ part:'snippet', q, type:'video', maxResults:'50', order:'relevance', key:API_KEY });
+      const r = await fetch('https://www.googleapis.com/youtube/v3/search?' + p);
+      if (!r.ok) {
+        const e = await r.json();
+        log(`[${i+1}] "${q}" — ERROR: ${e.error?.message||r.status}`, 'r');
+        if (r.status === 403) { log('Quota exceeded — stopping. Wait until midnight PT and try again.', 'r'); break; }
+        continue;
+      }
+      const data = await r.json();
+      let added = 0;
+      (data.items||[]).forEach(item => {
+        const id = item.id?.videoId;
+        if (!id || seen.has(id) || !isRemix(item)) return;
+        seen.add(id); raw.push(item); added++;
+      });
+      if (added > 0) log(`[${i+1}] "${q}" — +${added} (total: ${raw.length})`, 'g');
+      else log(`[${i+1}] "${q}" — no new`);
+    } catch(e) {
+      log(`[${i+1}] "${q}" — failed: ${e.message}`, 'r');
+    }
+
+    await new Promise(res => setTimeout(res, 100));
+  }
+
+  log(`\nFetching details for ${raw.length} videos...`, 'y');
+  const details = {};
+  const ids = raw.map(i => i.id.videoId);
+  for (let i = 0; i < ids.length; i += 50) {
+    try {
+      const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${ids.slice(i,i+50).join(',')}&key=${API_KEY}`);
+      const d = await r.json();
+      (d.items||[]).forEach(v => {
+        details[v.id] = { dur: fmtDur(v.contentDetails?.duration), secs: durSecs(v.contentDetails?.duration), views: +v.statistics?.viewCount||0 };
+      });
+      log(`Details batch ${Math.floor(i/50)+1} done`);
+    } catch(e) { log(`Details batch error: ${e.message}`, 'r'); }
+  }
+
+  const videos = raw.map(item => {
+    const id = item.id.videoId;
+    return {
+      id,
+      title:     item.snippet.title,
+      channel:   item.snippet.channelTitle,
+      thumb:     item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+      published: item.snippet.publishedAt,
+      genre:     detectGenre(item.snippet.title),
+      song:      detectSong(item.snippet.title),
+      dur:       details[id]?.dur   || '',
+      secs:      details[id]?.secs  || 0,
+      views:     details[id]?.views || 0,
+    };
+  }).filter(v => v.secs >= 62);
+
+  const genres = new Set(videos.map(v => v.genre)).size;
+  const songs  = new Set(videos.map(v => v.song).filter(s => s !== 'unknown')).size;
+
+  log(`\nDone! ${videos.length} remixes · ${raw.length - videos.length} shorts removed · ${genres} genres · ${songs} songs`, 'g');
+
+  resultData = { generated: new Date().toISOString(), total: videos.length, videos };
+  document.getElementById('sTotal').textContent  = videos.length;
+  document.getElementById('sGenres').textContent = genres;
+  document.getElementById('sSongs').textContent  = songs;
+  document.getElementById('result').classList.add('on');
+  document.getElementById('pl').textContent = `Done — ${videos.length} remixes`;
+  document.getElementById('pb').style.width = '100%';
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('startBtn').textContent = 'Fetch Again';
+}
+
+function dlJson() {
+  if (!resultData) return;
+  const blob = new Blob([JSON.stringify(resultData, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'data.json';
+  a.click();
+}
+</script>
+</body>
+</html>
